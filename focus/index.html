@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0D0E12">
+<title>FOCUS</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FOCUS">
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2224%22 fill=%22%23FF6B35%22/><text x=%2250%22 y=%2266%22 font-size=%2258%22 font-family=%22sans-serif%22 font-weight=%22800%22 text-anchor=%22middle%22 fill=%22%230D0E12%22>F</text></svg>">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ===================== HEADER (desktop) ===================== -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">F</span>
+      <span class="brand-name">FOCUS</span>
+    </div>
+  </header>
+
+  <!-- ===================== NAV ===================== -->
+  <nav class="nav" id="mainNav">
+    <button class="nav-item" data-screen="home">
+      <svg viewBox="0 0 24 24" class="nav-icon"><path d="M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-4.5a.5.5 0 0 1-.5-.5V15h-4v5.5a.5.5 0 0 1-.5.5H5a1 1 0 0 1-1-1V11.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+      <span>Início</span>
+    </button>
+    <button class="nav-item" data-screen="rotina">
+      <svg viewBox="0 0 24 24" class="nav-icon"><path d="M8 6h12M8 12h12M8 18h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="3.5" cy="6" r="1.6" fill="currentColor"/><circle cx="3.5" cy="12" r="1.6" fill="currentColor"/><circle cx="3.5" cy="18" r="1.6" fill="currentColor"/></svg>
+      <span>Rotina</span>
+    </button>
+    <button class="nav-item" data-screen="treinos">
+      <svg viewBox="0 0 24 24" class="nav-icon"><path d="M4 12h2m12 0h2M6 12v-2.5a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1V12m0 0v2.5a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V12m9 0v-2.5a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1V12m0 0v2.5a1 1 0 0 1-1 1h-1a1 1 0 0 1-1-1V12M9 12h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Treinos</span>
+    </button>
+    <button class="nav-item" data-screen="corrida">
+      <svg viewBox="0 0 24 24" class="nav-icon"><path d="M13.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM9 20l2-4.2-1.6-1.5.6-3.8-2 .7L6.4 14 5 13.4l1.7-3.6 3.4-1.3 2 1.9 3 .6-.4 2-2.6-.5-1 2.1L14 17l1.5 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Corrida</span>
+    </button>
+    <button class="nav-item" data-screen="progresso">
+      <svg viewBox="0 0 24 24" class="nav-icon"><path d="M5 19V10m6.5 9V5M18 19v-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span>Progresso</span>
+    </button>
+  </nav>
+
+  <!-- ===================== MAIN ===================== -->
+  <main class="main">
+
+    <!-- ---------- HOME ---------- -->
+    <section class="screen" id="screen-home" data-active="true">
+      <div class="greet-row">
+        <div>
+          <p class="greet-sub" id="greetDate">—</p>
+          <h1 class="greet-title" id="greetTitle">Olá</h1>
+        </div>
+        <button class="icon-btn" data-screen="config" title="Configurações">
+          <svg viewBox="0 0 24 24" width="20" height="20"><circle cx="6" cy="7" r="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M8 7h13M3 7h1" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="16" cy="14" r="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M14 14H3M18 14h3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><circle cx="9" cy="19" r="2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M3 19h4M13 19h8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+
+      <div class="card progress-card">
+        <div class="progress-head">
+          <span class="progress-label">Progresso de hoje</span>
+          <span class="progress-frac" id="homeProgressFrac">0 / 0</span>
+        </div>
+        <div class="bar">
+          <div class="bar-fill" id="homeProgressFill" style="width:0%"></div>
+        </div>
+        <p class="progress-msg" id="homeProgressMsg"></p>
+      </div>
+
+      <div class="card" id="homeTasksCard">
+        <div class="card-head">
+          <h2>Tarefas de hoje</h2>
+          <button class="link-btn" data-screen="rotina">ver tudo</button>
+        </div>
+        <ul class="check-list" id="homeTaskList"></ul>
+        <p class="empty-hint" id="homeTaskEmpty" hidden>Nada na rotina para hoje. <button class="link-btn" data-screen="rotina">Adicionar tarefa</button></p>
+      </div>
+
+      <div class="card" id="homeWorkoutCard" hidden>
+        <div class="card-head"><h2>Treino de hoje</h2></div>
+        <div class="workout-today">
+          <div>
+            <p class="workout-today-name" id="homeWorkoutName">—</p>
+            <p class="workout-today-meta" id="homeWorkoutMeta">—</p>
+          </div>
+          <button class="btn btn-primary" id="homeStartWorkoutBtn">Começar treino</button>
+        </div>
+      </div>
+
+      <div class="card" id="homeRunCard" hidden>
+        <div class="card-head"><h2>Corrida de hoje</h2></div>
+        <div class="run-today">
+          <p class="run-today-dist" id="homeRunDist">—</p>
+          <p class="run-today-meta" id="homeRunMeta">—</p>
+        </div>
+      </div>
+
+      <div class="card" id="homeHabitsCard">
+        <div class="card-head">
+          <h2>Hábitos</h2>
+          <button class="link-btn" data-screen="rotina">ver tudo</button>
+        </div>
+        <ul class="habit-chip-list" id="homeHabitList"></ul>
+        <p class="empty-hint" id="homeHabitEmpty" hidden>Nenhum hábito criado ainda. <button class="link-btn" data-screen="rotina">Criar hábito</button></p>
+      </div>
+    </section>
+
+    <!-- ---------- ROTINA ---------- -->
+    <section class="screen" id="screen-rotina" data-active="false">
+      <div class="screen-head">
+        <h1>Rotina</h1>
+      </div>
+
+      <div class="segmented" id="rotinaTabs">
+        <button class="seg-btn" data-tab="tarefas" data-seg-active="true">Tarefas</button>
+        <button class="seg-btn" data-tab="habitos">Hábitos</button>
+      </div>
+
+      <div id="rotinaTarefas" class="tab-panel" data-tab-active="true">
+        <button class="btn btn-outline btn-block" id="addTaskBtn">+ Nova tarefa</button>
+        <ul class="task-list" id="taskList"></ul>
+        <p class="empty-hint" id="taskListEmpty" hidden>Você ainda não criou nenhuma tarefa.</p>
+      </div>
+
+      <div id="rotinaHabitos" class="tab-panel" data-tab-active="false" hidden>
+        <button class="btn btn-outline btn-block" id="addHabitBtn">+ Novo hábito</button>
+        <ul class="habit-list" id="habitList"></ul>
+        <p class="empty-hint" id="habitListEmpty" hidden>Você ainda não criou nenhum hábito.</p>
+      </div>
+    </section>
+
+    <!-- ---------- TREINOS (lista) ---------- -->
+    <section class="screen" id="screen-treinos" data-active="false">
+      <div class="screen-head">
+        <h1>Treinos</h1>
+      </div>
+      <button class="btn btn-outline btn-block" id="addWorkoutBtn">+ Novo treino</button>
+      <ul class="workout-list" id="workoutList"></ul>
+      <p class="empty-hint" id="workoutListEmpty" hidden>Nenhum treino criado ainda.</p>
+
+      <div class="card-head" style="margin-top:28px">
+        <h2>Histórico de treinos</h2>
+      </div>
+      <ul class="history-list" id="workoutHistoryList"></ul>
+      <p class="empty-hint" id="workoutHistoryEmpty" hidden>Nenhum treino finalizado ainda.</p>
+    </section>
+
+    <!-- ---------- EDITAR TREINO ---------- -->
+    <section class="screen" id="screen-editar-treino" data-active="false">
+      <div class="screen-head">
+        <button class="icon-btn back-btn" data-screen="treinos">
+          <svg viewBox="0 0 24 24" width="22" height="22"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <h1 id="editWorkoutTitle">Novo treino</h1>
+      </div>
+
+      <label class="field-label" for="workoutNameInput">Nome do treino</label>
+      <input type="text" class="input" id="workoutNameInput" placeholder="Ex: Upper">
+
+      <div class="field-label-row">
+        <span class="field-label">Dia da semana (opcional)</span>
+      </div>
+      <div class="weekday-picker" id="workoutDaysPicker"></div>
+
+      <div class="card-head" style="margin-top:20px">
+        <h2>Exercícios</h2>
+      </div>
+      <ul class="exercise-list" id="exerciseList"></ul>
+      <button class="btn btn-outline btn-block" id="addExerciseBtn">+ Adicionar exercício</button>
+
+      <div class="sticky-actions">
+        <button class="btn btn-primary btn-block" id="saveWorkoutBtn">Salvar treino</button>
+        <button class="btn btn-danger-text" id="deleteWorkoutBtn" hidden>Excluir treino</button>
+      </div>
+    </section>
+
+    <!-- ---------- EXECUTAR TREINO ---------- -->
+    <section class="screen" id="screen-executar-treino" data-active="false">
+      <div class="screen-head">
+        <button class="icon-btn back-btn" data-screen="treinos">
+          <svg viewBox="0 0 24 24" width="22" height="22"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <h1 id="runWorkoutTitle">TREINO</h1>
+      </div>
+      <div id="runExerciseList"></div>
+      <div class="sticky-actions">
+        <button class="btn btn-primary btn-block" id="finishWorkoutBtn">Finalizar treino</button>
+      </div>
+    </section>
+
+    <!-- ---------- CORRIDA ---------- -->
+    <section class="screen" id="screen-corrida" data-active="false">
+      <div class="screen-head">
+        <h1>Corrida</h1>
+      </div>
+      <button class="btn btn-outline btn-block" id="addRunBtn">+ Registrar corrida</button>
+
+      <div class="stat-grid">
+        <div class="stat-box"><span class="stat-value" id="runTotalKm">0</span><span class="stat-tag">km totais</span></div>
+        <div class="stat-box"><span class="stat-value" id="runCount">0</span><span class="stat-tag">corridas</span></div>
+        <div class="stat-box"><span class="stat-value" id="runBestPace">—</span><span class="stat-tag">melhor pace</span></div>
+        <div class="stat-box"><span class="stat-value" id="runMaxDist">0</span><span class="stat-tag">maior distância</span></div>
+      </div>
+
+      <div class="card-head" style="margin-top:22px"><h2>Histórico</h2></div>
+      <ul class="run-history-list" id="runHistoryList"></ul>
+      <p class="empty-hint" id="runHistoryEmpty" hidden>Nenhuma corrida registrada ainda.</p>
+    </section>
+
+    <!-- ---------- PROGRESSO ---------- -->
+    <section class="screen" id="screen-progresso" data-active="false">
+      <div class="screen-head">
+        <h1>Progresso</h1>
+      </div>
+
+      <div class="card progress-card">
+        <div class="progress-head">
+          <span class="progress-label">Semana</span>
+          <span class="progress-frac" id="weekProgressFrac">0 / 7 dias</span>
+        </div>
+        <div class="bar"><div class="bar-fill" id="weekProgressFill" style="width:0%"></div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>Calendário</h2></div>
+        <div class="cal-head">
+          <button class="icon-btn" id="calPrevBtn">
+            <svg viewBox="0 0 24 24" width="18" height="18"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <span id="calMonthLabel">—</span>
+          <button class="icon-btn" id="calNextBtn">
+            <svg viewBox="0 0 24 24" width="18" height="18"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+        <div class="cal-detail" id="calDetail" hidden></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>Estatísticas</h2></div>
+        <div class="stat-section">
+          <p class="stat-section-title">Rotina</p>
+          <div class="stat-grid">
+            <div class="stat-box"><span class="stat-value" id="statTasksDone">0</span><span class="stat-tag">tarefas concluídas</span></div>
+          </div>
+        </div>
+        <div class="stat-section">
+          <p class="stat-section-title">Hábitos</p>
+          <div class="stat-grid">
+            <div class="stat-box"><span class="stat-value" id="statHabitsDone">0</span><span class="stat-tag">concluídos</span></div>
+            <div class="stat-box"><span class="stat-value" id="statBestStreak">0</span><span class="stat-tag">melhor sequência</span></div>
+          </div>
+        </div>
+        <div class="stat-section">
+          <p class="stat-section-title">Treinos</p>
+          <div class="stat-grid">
+            <div class="stat-box"><span class="stat-value" id="statWorkoutsDone">0</span><span class="stat-tag">realizados</span></div>
+          </div>
+        </div>
+        <div class="stat-section">
+          <p class="stat-section-title">Corrida</p>
+          <div class="stat-grid">
+            <div class="stat-box"><span class="stat-value" id="statRunKm">0</span><span class="stat-tag">km totais</span></div>
+            <div class="stat-box"><span class="stat-value" id="statRunCount">0</span><span class="stat-tag">corridas</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- CONFIGURAÇÕES ---------- -->
+    <section class="screen" id="screen-config" data-active="false">
+      <div class="screen-head">
+        <button class="icon-btn back-btn" data-screen="home">
+          <svg viewBox="0 0 24 24" width="22" height="22"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <h1>Configurações</h1>
+      </div>
+
+      <label class="field-label" for="configNameInput">Seu nome</label>
+      <input type="text" class="input" id="configNameInput" placeholder="Como quer ser chamado?">
+
+      <div class="field-label-row" style="margin-top:18px"><span class="field-label">Tema</span></div>
+      <div class="segmented" id="themeTabs">
+        <button class="seg-btn" data-theme="dark" data-seg-active="true">Escuro</button>
+        <button class="seg-btn" data-theme="light">Claro</button>
+      </div>
+
+      <div class="config-actions">
+        <button class="btn btn-outline btn-block" id="exportBtn">Exportar dados</button>
+        <button class="btn btn-outline btn-block" id="importBtn">Importar dados</button>
+        <input type="file" id="importFile" accept="application/json" hidden>
+        <button class="btn btn-danger btn-block" id="wipeBtn">Apagar todos os dados</button>
+      </div>
+      <p class="version-tag">FOCUS · v1.0</p>
+    </section>
+
+  </main>
+</div>
+
+<!-- ===================== MODAL (genérico) ===================== -->
+<div class="modal-backdrop" id="modalBackdrop" hidden>
+  <div class="modal" id="modal" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h3 id="modalTitle">Título</h3>
+      <button class="icon-btn" id="modalCloseBtn">
+        <svg viewBox="0 0 24 24" width="20" height="20"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<!-- ===================== TOAST ===================== -->
+<div class="toast" id="toast" hidden></div>
+
+<script src="script.js"></script>
+</body>
+</html>
