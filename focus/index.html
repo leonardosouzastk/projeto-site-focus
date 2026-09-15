@@ -118,23 +118,16 @@
       <div class="screen-head">
         <h1>Rotina</h1>
       </div>
+      <button class="today-shortcut" id="openTodayRoutineBtn"><span>HOJE</span><strong id="routineTodayLabel">—</strong><span>Ver minha agenda →</span></button>
+      <div class="card-head" style="margin-top:22px"><h2>Sua semana</h2></div>
+      <div class="routine-week-grid" id="routineWeekGrid"></div>
+    </section>
 
-      <div class="segmented" id="rotinaTabs">
-        <button class="seg-btn" data-tab="tarefas" data-seg-active="true">Tarefas</button>
-        <button class="seg-btn" data-tab="habitos">Hábitos</button>
-      </div>
-
-      <div id="rotinaTarefas" class="tab-panel" data-tab-active="true">
-        <button class="btn btn-outline btn-block" id="addTaskBtn">+ Nova tarefa</button>
-        <ul class="task-list" id="taskList"></ul>
-        <p class="empty-hint" id="taskListEmpty" hidden>Você ainda não criou nenhuma tarefa.</p>
-      </div>
-
-      <div id="rotinaHabitos" class="tab-panel" data-tab-active="false" hidden>
-        <button class="btn btn-outline btn-block" id="addHabitBtn">+ Novo hábito</button>
-        <ul class="habit-list" id="habitList"></ul>
-        <p class="empty-hint" id="habitListEmpty" hidden>Você ainda não criou nenhum hábito.</p>
-      </div>
+    <section class="screen" id="screen-rotina-dia" data-active="false">
+      <div class="screen-head"><button class="icon-btn back-btn" data-screen="rotina">‹</button><div><p class="eyebrow">Agenda diária</p><h1 id="routineDayTitle">SEGUNDA-FEIRA</h1></div></div>
+      <div class="card progress-card"><div class="progress-head"><span class="progress-label">Progresso do dia</span><span class="progress-frac" id="routineDayProgress">0 / 0</span></div><div class="bar"><div class="bar-fill" id="routineDayProgressFill" style="width:0%"></div></div><p class="progress-msg" id="routineDayProgressMsg"></p></div>
+      <div id="routineDayItems"></div>
+      <button class="btn btn-outline btn-block" id="addRoutineDayTaskBtn">+ Adicionar tarefa</button>
     </section>
 
     <!-- ---------- TREINOS (lista) ---------- -->
@@ -151,6 +144,13 @@
       </div>
       <ul class="history-list" id="workoutHistoryList"></ul>
       <p class="empty-hint" id="workoutHistoryEmpty" hidden>Nenhum treino finalizado ainda.</p>
+    </section>
+
+    <section class="screen" id="screen-detalhe-treino" data-active="false">
+      <div class="screen-head"><button class="icon-btn back-btn" data-screen="treinos">‹</button><div><p class="eyebrow">Pasta de treino</p><h1 id="workoutDetailTitle">PUSH</h1></div></div>
+      <p class="detail-meta" id="workoutDetailMeta"></p>
+      <div class="detail-actions"><button class="btn btn-small" id="editWorkoutDetailBtn">Editar treino</button><button class="btn btn-primary" id="startWorkoutDetailBtn">INICIAR TREINO</button></div>
+      <div class="card-head" style="margin-top:26px"><h2>Exercícios</h2></div><div id="workoutDetailExercises"></div>
     </section>
 
     <!-- ---------- EDITAR TREINO ---------- -->
@@ -190,6 +190,7 @@
         </button>
         <h1 id="runWorkoutTitle">TREINO</h1>
       </div>
+      <div class="workout-run-status"><div><span>Tempo de treino</span><strong id="workoutTimer">00:00:00</strong></div></div>
       <div id="runExerciseList"></div>
       <div class="sticky-actions">
         <button class="btn btn-primary btn-block" id="finishWorkoutBtn">Finalizar treino</button>

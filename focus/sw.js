@@ -1,5 +1,5 @@
 /* FOCUS — service worker básico (cache-first para funcionamento offline) */
-const CACHE_NAME = "focus-cache-v1";
+const CACHE_NAME = "focus-cache-v2";
 const ASSETS = [
   "./",
   "./index.html",

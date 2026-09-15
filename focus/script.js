@@ -14,6 +14,7 @@
   const WEEKDAY_FULL = ["domingo", "segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado"];
   const MONTH_LABELS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
   const RUN_TYPES = ["Corrida leve", "Longão", "Intervalado", "Tiros", "Outro"];
+  const SET_TYPES = ["Warm Up Set", "Feeder Set", "Work Set"];
 
   /* ------------------------------------------------------------------ *
    *  Data layer
@@ -37,9 +38,11 @@
       if (!raw) return defaultData();
       const parsed = JSON.parse(raw);
       const base = defaultData();
-      return Object.assign(base, parsed, {
+      const data = Object.assign(base, parsed, {
         settings: Object.assign(base.settings, parsed.settings || {})
       });
+      migrateWorkoutData(data);
+      return data;
     } catch (e) {
       console.error("Falha ao carregar dados:", e);
       return defaultData();
@@ -57,6 +60,50 @@
 
   function uid() {
     return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+
+  function normalizeSet(set) {
+    return {
+      id: set && set.id ? set.id : uid(),
+      type: SET_TYPES.includes(set && set.type) ? set.type : "Work Set",
+      weight: Number(set && set.weight) || 0,
+      reps: Number(set && set.reps) || 0,
+      done: Boolean(set && set.done)
+    };
+  }
+
+  // Mantém backups e dados existentes compatíveis com a estrutura por série.
+  function normalizeExercise(exercise) {
+    const legacyCount = Math.max(0, Number(exercise && exercise.sets) || 0);
+    const rawSets = Array.isArray(exercise && exercise.sets)
+      ? exercise.sets
+      : Array.from({ length: legacyCount }, () => ({
+          type: "Work Set", weight: exercise.weight, reps: exercise.reps, done: false
+        }));
+    return {
+      id: exercise && exercise.id ? exercise.id : uid(),
+      name: exercise && exercise.name ? exercise.name : "Exercício",
+      sets: rawSets.map(normalizeSet)
+    };
+  }
+
+  function migrateWorkoutData(data) {
+    let changed = false;
+    const needsExerciseMigration = exercise => !exercise || !exercise.id || !Array.isArray(exercise.sets)
+      || exercise.sets.some(set => !set || !set.id || !SET_TYPES.includes(set.type));
+    data.workouts = (data.workouts || []).map(workout => {
+      const exercises = (workout.exercises || []).map(exercise => {
+        const normalized = normalizeExercise(exercise);
+        if (needsExerciseMigration(exercise)) changed = true;
+        return normalized;
+      });
+      return Object.assign({}, workout, { exercises });
+    });
+    data.workoutHistory = (data.workoutHistory || []).map(history => {
+      if ((history.exercises || []).some(needsExerciseMigration)) changed = true;
+      return Object.assign({}, history, { exercises: (history.exercises || []).map(normalizeExercise) });
+    });
+    if (changed) setTimeout(saveData, 0);
   }
 
   /* ------------------------------------------------------------------ *
@@ -206,7 +253,9 @@
   function renderScreen(name) {
     if (name === "home") renderHome();
     else if (name === "rotina") renderRotina();
+    else if (name === "rotina-dia") renderRoutineDay();
     else if (name === "treinos") renderTreinos();
+    else if (name === "detalhe-treino") renderWorkoutDetail();
     else if (name === "corrida") renderCorrida();
     else if (name === "progresso") renderProgresso();
     else if (name === "config") renderConfig();
@@ -391,28 +440,60 @@
   /* ------------------------------------------------------------------ *
    *  ROTINA (tasks + habits)
    * ------------------------------------------------------------------ */
-  document.getElementById("rotinaTabs").addEventListener("click", e => {
-    const btn = e.target.closest(".seg-btn");
-    if (!btn) return;
-    document.querySelectorAll("#rotinaTabs .seg-btn").forEach(b => b.dataset.segActive = "false");
-    btn.dataset.segActive = "true";
-    const tab = btn.dataset.tab;
-    document.getElementById("rotinaTarefas").hidden = tab !== "tarefas";
-    document.getElementById("rotinaHabitos").hidden = tab !== "habitos";
-  });
+  let routineDate = todayStr();
+
+  function openRoutineDay(dateStr) {
+    routineDate = dateStr;
+    goToScreen("rotina-dia");
+  }
 
   function renderRotina() {
     const today = todayStr();
-    const taskListEl = document.getElementById("taskList");
-    taskListEl.innerHTML = "";
-    const tasksSorted = [...DATA.tasks].sort((a, b) => (a.time || "99:99").localeCompare(b.time || "99:99"));
-    tasksSorted.forEach(t => taskListEl.appendChild(renderTaskRow(t, today)));
-    document.getElementById("taskListEmpty").hidden = DATA.tasks.length > 0;
+    document.getElementById("routineTodayLabel").textContent = formatDateLong(today);
+    document.getElementById("openTodayRoutineBtn").onclick = () => openRoutineDay(today);
+    const grid = document.getElementById("routineWeekGrid");
+    grid.innerHTML = "";
+    const weekStart = addDays(today, -weekdayOf(today));
+    WEEKDAY_FULL.forEach((label, weekday) => {
+      const date = addDays(weekStart, weekday);
+      const progress = dayProgress(date);
+      const card = el("button", { class: "routine-day-card", "data-today": date === today ? "true" : "false" }, [
+        el("span", { class: "routine-day-label" }, [label.slice(0, 3).toUpperCase()]),
+        el("strong", {}, [String(strToDate(date).getDate())]),
+        el("small", {}, [progress.total ? `${progress.done}/${progress.total} concluídas` : "Agenda livre"])
+      ]);
+      card.addEventListener("click", () => openRoutineDay(date));
+      grid.appendChild(card);
+    });
+  }
 
-    const habitListEl = document.getElementById("habitList");
-    habitListEl.innerHTML = "";
-    DATA.habits.forEach(h => habitListEl.appendChild(renderHabitRow(h, today)));
-    document.getElementById("habitListEmpty").hidden = DATA.habits.length > 0;
+  function renderRoutineDay() {
+    const date = routineDate;
+    const progress = dayProgress(date);
+    document.getElementById("routineDayTitle").textContent = WEEKDAY_FULL[weekdayOf(date)].toUpperCase();
+    document.getElementById("routineDayProgress").textContent = `${progress.done} / ${progress.total}`;
+    document.getElementById("routineDayProgressFill").style.width = progress.pct + "%";
+    document.getElementById("routineDayProgressMsg").textContent = progress.total === 0 ? "Nada planejado para este dia." : progress.pct === 100 ? "🎉 Dia concluído" : `${progress.pct}% concluído`;
+    const list = document.getElementById("routineDayItems");
+    list.innerHTML = "";
+    const tasks = tasksForDate(date).sort((a, b) => (a.time || "99:99").localeCompare(b.time || "99:99"));
+    tasks.forEach(task => list.appendChild(renderCheckItem(task, date, "task")));
+    workoutsScheduledOn(date).forEach(workout => list.appendChild(renderRoutineWorkout(workout, date)));
+    habitsActiveOn(date).forEach(habit => list.appendChild(renderRoutineHabit(habit, date)));
+  }
+
+  function renderRoutineWorkout(workout, date) {
+    const done = workoutDoneOn(workout.id, date);
+    const row = el("div", { class: "agenda-item", "data-done": done ? "true" : "false" }, [el("span", { class: "agenda-icon" }, ["🏋️"]), el("div", { class: "list-card-main" }, [el("p", { class: "list-card-title" }, [workout.name]), el("p", { class: "list-card-sub" }, [done ? "Treino concluído" : "Treino programado"])])]);
+    row.addEventListener("click", () => openWorkoutDetail(workout.id));
+    return row;
+  }
+
+  function renderRoutineHabit(habit, date) {
+    const done = (habit.completedDates || []).includes(date);
+    const row = el("div", { class: "agenda-item", "data-done": done ? "true" : "false" }, [el("button", { class: "checkbox", "data-done": done ? "true" : "false" }, ["✓"]), el("div", { class: "list-card-main" }, [el("p", { class: "list-card-title" }, [habit.name]), el("p", { class: "list-card-sub" }, ["Hábito"])] )]);
+    row.querySelector("button").addEventListener("click", e => { e.stopPropagation(); toggleHabitDone(habit.id, date); });
+    return row;
   }
 
   function renderTaskRow(task, today) {
@@ -493,13 +574,15 @@
     ]);
   }
 
-  document.getElementById("addTaskBtn").addEventListener("click", () => openTaskModal(null));
-  document.getElementById("addHabitBtn").addEventListener("click", () => openHabitModal(null));
+  document.getElementById("addRoutineDayTaskBtn").addEventListener("click", () => openTaskModal(null, routineDate));
 
-  function openTaskModal(existing) {
+  function openTaskModal(existing, initialDate) {
     const nameInput = el("input", { class: "input", type: "text", placeholder: "Nome da tarefa", value: existing ? existing.name : "" });
     const timeInput = el("input", { class: "input", type: "time", value: existing ? (existing.time || "") : "" });
-    let recurring = existing ? !!existing.recurring : true;
+    const categoryInput = el("select", { class: "input" }, ["Treino", "Corrida", "Estudo", "Trabalho", "Hábito", "Outro"].map(value => el("option", { value }, [value])));
+    categoryInput.value = existing && existing.category ? existing.category : "Outro";
+    const noteInput = el("textarea", { class: "input", placeholder: "Observação (opcional)" }, [existing ? (existing.note || "") : ""]);
+    let recurring = existing ? !!existing.recurring : !initialDate;
     let days = existing && existing.days ? [...existing.days] : [];
 
     const recToggle = el("div", { class: "toggle", "data-on": recurring ? "true" : "false" });
@@ -527,14 +610,16 @@
       if (existing) {
         existing.name = name;
         existing.time = timeInput.value || "";
+        existing.category = categoryInput.value;
+        existing.note = noteInput.value.trim();
         existing.recurring = recurring;
         existing.days = recurring ? days : [];
-        if (!recurring) existing.date = existing.date || todayStr();
+        if (!recurring) existing.date = existing.date || initialDate || todayStr();
       } else {
         DATA.tasks.push({
-          id: uid(), name, time: timeInput.value || "",
+          id: uid(), name, time: timeInput.value || "", category: categoryInput.value, note: noteInput.value.trim(),
           recurring, days: recurring ? days : [],
-          date: recurring ? null : todayStr(),
+          date: recurring ? null : (initialDate || todayStr()),
           createdAt: todayStr(),
           completedDates: []
         });
@@ -550,6 +635,8 @@
       nameInput,
       el("label", { class: "field-label" }, ["Horário (opcional)"]),
       timeInput,
+      el("label", { class: "field-label" }, ["Categoria"]), categoryInput,
+      el("label", { class: "field-label" }, ["Observação (opcional)"]), noteInput,
       el("div", { class: "check-row" }, [recToggle, el("label", {}, ["Recorrente"])]),
       dayPicker,
       saveBtn
@@ -598,7 +685,7 @@
     const li = el("li", { class: "list-card" });
     li.addEventListener("click", (e) => {
       if (e.target.closest("button")) return;
-      startWorkoutExecution(w.id);
+      openWorkoutDetail(w.id);
     });
     const top = el("div", { class: "workout-row-top" }, [
       el("p", { class: "list-card-title" }, [w.name]),
@@ -614,20 +701,40 @@
     let sub = `${w.exercises.length} exercício${w.exercises.length === 1 ? "" : "s"}`;
     if (w.days && w.days.length) sub += " • " + w.days.map(d => WEEKDAY_LABELS[d]).join(" ");
     li.appendChild(el("p", { class: "list-card-sub" }, [sub]));
+    const last = DATA.workoutHistory.filter(h => h.workoutId === w.id).sort((a, b) => b.date.localeCompare(a.date))[0];
+    li.appendChild(el("p", { class: "workout-last" }, [last ? `Último treino: ${formatDateShort(last.date)}` : "Ainda não realizado"]));
     return li;
+  }
+
+  let viewingWorkoutId = null;
+  function openWorkoutDetail(workoutId) { viewingWorkoutId = workoutId; goToScreen("detalhe-treino"); }
+  function renderWorkoutDetail() {
+    const workout = DATA.workouts.find(w => w.id === viewingWorkoutId);
+    if (!workout) return goToScreen("treinos");
+    document.getElementById("workoutDetailTitle").textContent = workout.name.toUpperCase();
+    const days = workout.days && workout.days.length ? workout.days.map(day => WEEKDAY_FULL[day].replace("-feira", "")).join(" • ") : "Sem dias definidos";
+    document.getElementById("workoutDetailMeta").textContent = `${days} · ${workout.exercises.length} exercício${workout.exercises.length === 1 ? "" : "s"}`;
+    document.getElementById("editWorkoutDetailBtn").onclick = () => openWorkoutEditor(workout.id);
+    document.getElementById("startWorkoutDetailBtn").onclick = () => startWorkoutExecution(workout.id);
+    const container = document.getElementById("workoutDetailExercises"); container.innerHTML = "";
+    workout.exercises.forEach(exercise => container.appendChild(el("div", { class: "detail-exercise" }, [
+      el("strong", {}, [exercise.name]), el("span", {}, [`${exercise.sets.length} série${exercise.sets.length === 1 ? "" : "s"}`]),
+      el("p", {}, [exercise.sets.map(set => `${set.type} · ${set.weight} kg × ${set.reps}`).join("\n")])
+    ])));
   }
 
   function renderHistoryItem(h) {
     const item = el("div", { class: "history-item" });
     item.appendChild(el("div", { class: "history-top" }, [
       el("span", { class: "history-name" }, [h.workoutName]),
-      el("span", { class: "history-date" }, [formatDateShort(h.date)])
+      el("span", { class: "history-date" }, [h.durationSeconds != null ? `${formatDateShort(h.date)} · ${formatDuration(h.durationSeconds)}` : formatDateShort(h.date)])
     ]));
     const lines = h.exercises.map(ex => {
       const doneSets = ex.sets.filter(s => s.done).length;
-      return `${ex.name} — ${doneSets}/${ex.sets.length} séries`;
+      const series = ex.sets.map(s => `${s.done ? "✓" : "○"} ${s.type} · ${s.weight} kg × ${s.reps}`).join(" | ");
+      return `${ex.name} — ${doneSets}/${ex.sets.length} séries${series ? `\n${series}` : ""}`;
     });
-    item.appendChild(el("p", { class: "history-exercises" }, [lines.join(" · ")]));
+    item.appendChild(el("p", { class: "history-exercises history-series-detail" }, [lines.join("\n")]));
     return item;
   }
 
@@ -680,7 +787,10 @@
           iconDeleteBtn(() => { editingWorkout.exercises.splice(idx, 1); renderExerciseEditorList(); })
         ])
       ]));
-      item.appendChild(el("p", { class: "exercise-item-meta" }, [`${ex.sets} séries × ${ex.reps} rep · ${ex.weight} kg`]));
+      const summary = ex.sets.length
+        ? ex.sets.map(set => `${set.type} · ${set.weight} kg × ${set.reps}`).join("\n")
+        : "Nenhuma série adicionada";
+      item.appendChild(el("p", { class: "exercise-item-meta exercise-series-summary" }, [summary]));
       list.appendChild(item);
     });
   }
@@ -690,17 +800,40 @@
   function openExerciseModal(idx) {
     const existing = idx !== null ? editingWorkout.exercises[idx] : null;
     const nameInput = el("input", { class: "input", type: "text", placeholder: "Ex: Supino reto", value: existing ? existing.name : "" });
-    const setsInput = el("input", { class: "input", type: "number", min: "1", placeholder: "Séries", value: existing ? existing.sets : "3" });
-    const repsInput = el("input", { class: "input", type: "number", min: "1", placeholder: "Repetições", value: existing ? existing.reps : "10" });
-    const weightInput = el("input", { class: "input", type: "number", min: "0", step: "0.5", placeholder: "Peso (kg)", value: existing ? existing.weight : "" });
+    const draftSets = existing ? existing.sets.map(normalizeSet) : [];
+    const seriesList = el("div", { class: "series-editor-list" });
+    const renderSeries = () => {
+      seriesList.innerHTML = "";
+      if (!draftSets.length) seriesList.appendChild(el("p", { class: "empty-hint" }, ["Adicione as séries deste exercício."]));
+      draftSets.forEach((set, setIdx) => {
+        const typeInput = el("select", { class: "input set-type-input" }, SET_TYPES.map(type => {
+          const option = el("option", { value: type }, [type]);
+          option.selected = set.type === type;
+          return option;
+        }));
+        const weightInput = el("input", { class: "input", type: "number", min: "0", step: "0.5", placeholder: "Peso", value: String(set.weight) });
+        const repsInput = el("input", { class: "input", type: "number", min: "0", step: "1", placeholder: "Reps", value: String(set.reps) });
+        typeInput.addEventListener("change", () => { set.type = typeInput.value; });
+        weightInput.addEventListener("change", () => { set.weight = Number(weightInput.value) || 0; });
+        repsInput.addEventListener("change", () => { set.reps = Number(repsInput.value) || 0; });
+        const row = el("div", { class: "series-editor-row" }, [
+          el("span", { class: "series-number" }, [`${setIdx + 1}`]),
+          el("div", { class: "series-editor-fields" }, [
+            typeInput,
+            el("div", { class: "input-row" }, [weightInput, repsInput])
+          ]),
+          iconDeleteBtn(() => { draftSets.splice(setIdx, 1); renderSeries(); })
+        ]);
+        seriesList.appendChild(row);
+      });
+    };
+    const addSetBtn = el("button", { type: "button", class: "btn btn-outline btn-block" }, ["+ Adicionar série"]);
+    addSetBtn.addEventListener("click", () => { draftSets.push(normalizeSet({ type: "Work Set", weight: 0, reps: 0 })); renderSeries(); });
     const saveBtn = el("button", { class: "btn btn-primary btn-block" }, [existing ? "Salvar exercício" : "Adicionar exercício"]);
     saveBtn.addEventListener("click", () => {
       const name = nameInput.value.trim();
-      const sets = parseInt(setsInput.value, 10) || 1;
-      const reps = parseInt(repsInput.value, 10) || 1;
-      const weight = parseFloat(weightInput.value) || 0;
       if (!name) { showToast("Digite o nome do exercício."); return; }
-      const data = { name, sets, reps, weight };
+      const data = { id: existing ? existing.id : uid(), name, sets: draftSets.map(normalizeSet) };
       if (idx !== null) editingWorkout.exercises[idx] = data;
       else editingWorkout.exercises.push(data);
       closeModal();
@@ -708,14 +841,12 @@
     });
     const wrap = el("div", {}, [
       el("label", { class: "field-label" }, ["Nome do exercício"]), nameInput,
-      el("div", { class: "input-row" }, [
-        el("div", { style: "flex:1" }, [el("label", { class: "field-label" }, ["Séries"]), setsInput]),
-        el("div", { style: "flex:1" }, [el("label", { class: "field-label" }, ["Repetições"]), repsInput]),
-      ]),
-      el("label", { class: "field-label" }, ["Peso (kg)"]), weightInput,
+      el("div", { class: "field-label-row" }, [el("span", { class: "field-label" }, ["Séries individuais"])]),
+      seriesList, addSetBtn,
       saveBtn
     ]);
     openModal(existing ? "Editar exercício" : "Novo exercício", wrap);
+    renderSeries();
   }
 
   document.getElementById("saveWorkoutBtn").addEventListener("click", () => {
@@ -743,7 +874,13 @@
   });
 
   /* ---------- executar treino ---------- */
-  let runningWorkout = null; // { workoutId, name, exercises: [{name, sets:[{weight,reps,done}]}] }
+  let runningWorkout = null; // { workoutId, name, exercises: [{id,name,sets:[{id,type,weight,reps,done}]}] }
+  let workoutTimerId = null;
+  function formatDuration(seconds) { return `${pad2(Math.floor(seconds / 3600))}:${pad2(Math.floor((seconds % 3600) / 60))}:${pad2(seconds % 60)}`; }
+  function updateWorkoutTimer() {
+    if (!runningWorkout) return;
+    document.getElementById("workoutTimer").textContent = formatDuration(Math.max(0, Math.floor((Date.now() - runningWorkout.startedAt) / 1000)));
+  }
 
   function startWorkoutExecution(workoutId) {
     const w = DATA.workouts.find(x => x.id === workoutId);
@@ -752,12 +889,16 @@
     runningWorkout = {
       workoutId: w.id,
       name: w.name,
+      startedAt: Date.now(),
       exercises: w.exercises.map(ex => ({
+        id: ex.id,
         name: ex.name,
-        sets: Array.from({ length: ex.sets }, () => ({ weight: ex.weight, reps: ex.reps, done: false }))
+        collapsed: false,
+        sets: ex.sets.map(set => Object.assign({}, normalizeSet(set), { done: false }))
       }))
     };
     document.getElementById("runWorkoutTitle").textContent = w.name.toUpperCase();
+    clearInterval(workoutTimerId); updateWorkoutTimer(); workoutTimerId = setInterval(updateWorkoutTimer, 1000);
     renderRunExerciseList();
     goToScreen("executar-treino");
   }
@@ -767,10 +908,20 @@
     container.innerHTML = "";
     runningWorkout.exercises.forEach((ex, exIdx) => {
       const card = el("div", { class: "run-exercise" });
-      card.appendChild(el("p", { class: "run-exercise-title" }, [ex.name]));
-      ex.sets.forEach((s, sIdx) => {
+      const head = el("div", { class: "run-exercise-head" }, [
+        el("div", {}, [el("p", { class: "run-exercise-title" }, [ex.name]), el("span", { class: "run-exercise-meta" }, [`${ex.sets.length} série${ex.sets.length === 1 ? "" : "s"}`])]),
+        el("div", { class: "run-exercise-actions" })
+      ]);
+      const addSetBtn = el("button", { class: "set-action-btn", "aria-label": "adicionar série" }, ["+ Série"]);
+      addSetBtn.addEventListener("click", () => openRunningAddSetModal(ex));
+      const collapseBtn = el("button", { class: "set-action-btn", "aria-label": ex.collapsed ? "expandir séries" : "recolher séries" }, [ex.collapsed ? "Mostrar" : "Recolher"]);
+      collapseBtn.addEventListener("click", () => { ex.collapsed = !ex.collapsed; renderRunExerciseList(); });
+      head.querySelector(".run-exercise-actions").append(addSetBtn, collapseBtn);
+      card.appendChild(head);
+      if (!ex.collapsed) ex.sets.forEach((s, sIdx) => {
         const row = el("div", { class: "set-row", "data-done": s.done ? "true" : "false" });
-        row.appendChild(el("span", { class: "set-row-label" }, [`Série ${sIdx + 1}`]));
+        row.appendChild(el("span", { class: "set-row-label" }, [`${sIdx + 1}`]));
+        row.appendChild(el("span", { class: "set-row-type" }, [s.type]));
         row.appendChild(el("span", { class: "set-row-vals" }, [`${s.weight} kg × ${s.reps}`]));
         const check = el("button", { class: "set-check" }, [
           el("svg", { viewBox: "0 0 24 24", width: "14", height: "14", html: '<path d="M5 12.5 9.5 17 19 7" fill="none" stroke="white" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" style="opacity:' + (s.done ? 1 : 0) + '"/>' })
@@ -779,20 +930,69 @@
           s.done = !s.done;
           renderRunExerciseList();
         });
+        const edit = el("button", { class: "set-edit", "aria-label": "alterar peso e repetições" }, ["Editar"]);
+        edit.addEventListener("click", () => openRunningSetModal(s));
+        row.appendChild(edit);
         row.appendChild(check);
         card.appendChild(row);
       });
+      if (ex.collapsed) card.appendChild(el("p", { class: "collapsed-series-hint" }, [`${ex.sets.filter(set => set.done).length}/${ex.sets.length} séries concluídas`]));
       container.appendChild(card);
     });
+    const addExerciseBtn = el("button", { class: "btn btn-outline btn-block" }, ["+ Adicionar exercício durante o treino"]);
+    addExerciseBtn.addEventListener("click", () => openRunningExerciseModal());
+    container.appendChild(addExerciseBtn);
+  }
+
+  function openRunningSetModal(set) {
+    const weight = el("input", { class: "input", type: "number", step: "0.5", min: "0", value: String(set.weight) });
+    const reps = el("input", { class: "input", type: "number", step: "1", min: "0", value: String(set.reps) });
+    const save = el("button", { class: "btn btn-primary btn-block" }, ["Aplicar nesta execução"]);
+    save.addEventListener("click", () => { set.weight = Number(weight.value) || 0; set.reps = Number(reps.value) || 0; closeModal(); renderRunExerciseList(); });
+    openModal("Ajustar série realizada", el("div", {}, [el("label", { class: "field-label" }, ["Peso (kg)"]), weight, el("label", { class: "field-label" }, ["Repetições"]), reps, save]));
+  }
+
+  function openRunningAddSetModal(exercise) {
+    const type = el("select", { class: "input" }, SET_TYPES.map(value => el("option", { value }, [value])));
+    const weight = el("input", { class: "input", type: "number", step: "0.5", min: "0", value: "0" });
+    const reps = el("input", { class: "input", type: "number", step: "1", min: "0", value: "0" });
+    const save = el("button", { class: "btn btn-primary btn-block" }, ["Adicionar série"]);
+    save.addEventListener("click", () => {
+      exercise.sets.push(normalizeSet({ type: type.value, weight: Number(weight.value) || 0, reps: Number(reps.value) || 0, done: false }));
+      exercise.collapsed = false; closeModal(); renderRunExerciseList();
+    });
+    openModal(`Adicionar série · ${exercise.name}`, el("div", {}, [el("label", { class: "field-label" }, ["Tipo"]), type, el("label", { class: "field-label" }, ["Peso (kg)"]), weight, el("label", { class: "field-label" }, ["Repetições"]), reps, save]));
+  }
+
+  function openRunningExerciseModal() {
+    const nameInput = el("input", { class: "input", type: "text", placeholder: "Ex: Rosca direta" });
+    const addBtn = el("button", { class: "btn btn-primary btn-block" }, ["Adicionar exercício"]);
+    addBtn.addEventListener("click", () => {
+      const name = nameInput.value.trim();
+      if (!name) { showToast("Digite o nome do exercício."); return; }
+      runningWorkout.exercises.push({ id: uid(), name, sets: [] });
+      closeModal();
+      renderRunExerciseList();
+      showToast("Exercício adicionado. Você pode registrar as séries ao finalizar.");
+    });
+    openModal("Adicionar exercício", el("div", {}, [
+      el("label", { class: "field-label" }, ["Nome do exercício"]), nameInput, addBtn
+    ]));
   }
 
   document.getElementById("finishWorkoutBtn").addEventListener("click", () => {
+    if (!runningWorkout) return;
     const today = todayStr();
+    clearInterval(workoutTimerId);
+    const endedAt = Date.now();
     DATA.workoutHistory.push({
       id: uid(),
       workoutId: runningWorkout.workoutId,
       workoutName: runningWorkout.name,
       date: today,
+      startedAt: runningWorkout.startedAt,
+      endedAt,
+      durationSeconds: Math.max(0, Math.floor((endedAt - runningWorkout.startedAt) / 1000)),
       exercises: runningWorkout.exercises
     });
     saveData();
@@ -1055,6 +1255,7 @@
         const parsed = JSON.parse(reader.result);
         confirmModal("Importar este backup vai substituir todos os dados atuais. Continuar?", () => {
           DATA = Object.assign(defaultData(), parsed);
+          migrateWorkoutData(DATA);
           saveData();
           applyTheme();
           renderScreen(currentScreenName());
